@@ -15,7 +15,6 @@
  */
 package org.springframework.security.crypto.encrypt;
 
-import org.springframework.security.crypto.encrypt.AesBytesEncryptor.CipherAlgorithm;
 import org.springframework.security.crypto.keygen.KeyGenerators;
 
 /**

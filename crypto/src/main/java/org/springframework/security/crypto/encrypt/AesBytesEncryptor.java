@@ -17,23 +17,17 @@ package org.springframework.security.crypto.encrypt;
 
 import static org.springframework.security.crypto.encrypt.CipherUtils.doFinal;
 import static org.springframework.security.crypto.encrypt.CipherUtils.initCipher;
-import static org.springframework.security.crypto.encrypt.CipherUtils.newCipher;
 import static org.springframework.security.crypto.encrypt.CipherUtils.newSecretKey;
 import static org.springframework.security.crypto.util.EncodingUtils.concatenate;
 import static org.springframework.security.crypto.util.EncodingUtils.subArray;
 
-import java.security.spec.AlgorithmParameterSpec;
-
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
-import javax.crypto.spec.GCMParameterSpec;
-import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.springframework.security.crypto.codec.Hex;
 import org.springframework.security.crypto.keygen.BytesKeyGenerator;
-import org.springframework.security.crypto.keygen.KeyGenerators;
 
 /**
  * Encryptor that uses 256-bit AES encryption.
@@ -53,40 +47,9 @@ final class AesBytesEncryptor implements BytesEncryptor {
 
 	private CipherAlgorithm alg;
 
-	private static final String AES_CBC_ALGORITHM = "AES/CBC/PKCS5Padding";
+	static final String AES_CBC_ALGORITHM = "AES/CBC/PKCS5Padding";
 
-	private static final String AES_GCM_ALGORITHM = "AES/GCM/NoPadding";
-
-	public enum CipherAlgorithm {
-
-		CBC(AES_CBC_ALGORITHM, NULL_IV_GENERATOR), GCM(AES_GCM_ALGORITHM, KeyGenerators
-				.secureRandom(16));
-
-		private BytesKeyGenerator ivGenerator;
-		private String name;
-
-		private CipherAlgorithm(String name, BytesKeyGenerator ivGenerator) {
-			this.name = name;
-			this.ivGenerator = ivGenerator;
-		}
-
-		@Override
-		public String toString() {
-			return this.name;
-		}
-
-		public AlgorithmParameterSpec getParameterSpec(byte[] iv) {
-			return this == CBC ? new IvParameterSpec(iv) : new GCMParameterSpec(128, iv);
-		}
-
-		public Cipher createCipher() {
-			return newCipher(this.toString());
-		}
-
-		public BytesKeyGenerator defaultIvGenerator() {
-			return this.ivGenerator;
-		}
-	}
+	static final String AES_GCM_ALGORITHM = "AES/GCM/NoPadding";
 
 	public AesBytesEncryptor(String password, CharSequence salt) {
 		this(password, salt, null);
@@ -98,9 +61,14 @@ final class AesBytesEncryptor implements BytesEncryptor {
 	}
 
 	public AesBytesEncryptor(String password, CharSequence salt,
-			BytesKeyGenerator ivGenerator, CipherAlgorithm alg) {
+							 BytesKeyGenerator ivGenerator, CipherAlgorithm alg) {
+		this(password, salt, ivGenerator, alg, 256);
+	}
+
+	public AesBytesEncryptor(String password, CharSequence salt,
+							 BytesKeyGenerator ivGenerator, CipherAlgorithm alg, int keyLength) {
 		PBEKeySpec keySpec = new PBEKeySpec(password.toCharArray(), Hex.decode(salt),
-				1024, 256);
+				1024, keyLength);
 		SecretKey secretKey = newSecretKey("PBKDF2WithHmacSHA1", keySpec);
 		this.secretKey = new SecretKeySpec(secretKey.getEncoded(), "AES");
 		this.alg = alg;
@@ -143,7 +111,7 @@ final class AesBytesEncryptor implements BytesEncryptor {
 		return subArray(encryptedBytes, ivLength, encryptedBytes.length);
 	}
 
-	private static final BytesKeyGenerator NULL_IV_GENERATOR = new BytesKeyGenerator() {
+	static final BytesKeyGenerator NULL_IV_GENERATOR = new BytesKeyGenerator() {
 
 		private final byte[] VALUE = new byte[16];
 
